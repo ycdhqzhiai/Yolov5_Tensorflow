@@ -26,3 +26,4 @@ class Focus(nn.Module):
         re = self.conv(x)
         return re
 ```
+**测试时候训练开始正常收敛，根据选择loss不同，训练loss在第5-7个epoch会出现NA，修改ing**
