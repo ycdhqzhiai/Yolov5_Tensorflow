@@ -79,7 +79,8 @@ class Dataset(object):
                         index -= self.num_samples
 
                     annotation = self.annotations[index]
-                    image, bboxes = self.parse_annotation(annotation)                    
+
+                    image, bboxes = self.parse_annotation(annotation)
                     batch_image[num, :, :, :] = image
 
                     if self.net_type == 'tiny':
@@ -118,6 +119,7 @@ class Dataset(object):
             _, w, _ = image.shape
             image = image[:, ::-1, :]
             bboxes[:, [0,2]] = w - bboxes[:, [2, 0]]
+
         return image, bboxes
 
 
@@ -171,7 +173,6 @@ class Dataset(object):
         
         image = np.array(cv2.imread(image_path))
         bboxes = np.array([list(map(lambda x: int(float(x)), box.split(','))) for box in line[1:]])
-
         if self.data_aug:
             image, bboxes = self.random_horizontal_flip(np.copy(image), np.copy(bboxes))
             image, bboxes = self.random_crop(np.copy(image), np.copy(bboxes))

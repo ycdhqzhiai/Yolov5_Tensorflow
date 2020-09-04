@@ -37,7 +37,7 @@ class YoloTrain(object):
         self.warmup_periods = cfg.TRAIN.WARMUP_EPOCHS
         self.initial_weight = cfg.TRAIN.INITIAL_WEIGHT
         
-        self.ckpt_path = cfg.TRAIN.CKPT_PATH        
+        self.ckpt_path = cfg.TRAIN.CKPT_PATH
         if not os.path.exists(self.ckpt_path):
             os.makedirs(self.ckpt_path)
         
@@ -191,7 +191,7 @@ class YoloTrain(object):
             pbar = tqdm(self.trainset)
             train_epoch_loss, test_epoch_loss = [], []
 
-            for train_data in pbar:                
+            for train_data in pbar:
                 if net_type == 'tiny':
                     _, summary, train_step_loss, global_step_val = self.sess.run(
                         [train_op, self.write_op, self.loss, self.global_step], 
@@ -246,6 +246,7 @@ class YoloTrain(object):
                 print('=> Epoch: %2d Time: %s Train loss: %.2f' % (epoch, log_time, train_epoch_loss))
 
 
+
 if __name__ == '__main__':
     """
     argv = sys.argv
@@ -254,7 +255,7 @@ if __name__ == '__main__':
         sys.exit()
 
     """
-    gpu_id = 0 #argv[1]
+    gpu_id = 1 #argv[1]
     net_type = 'yolov5' #argv[2]
     print('train gpu_id=%s, net_type=%s' % (gpu_id, net_type))
 

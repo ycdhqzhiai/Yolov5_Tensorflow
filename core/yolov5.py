@@ -24,7 +24,7 @@ def mish(inputs):
     return inputs
 
 
-def conv(input_data, filters_shape, trainable, name, downsample=False, activate=True, bn=False, act_fun='mish'):
+def conv(input_data, filters_shape, trainable, name, downsample=False, activate=True, bn=False, bias=True, act_fun='mish'):
     with tf.variable_scope(name):
         if downsample:
             pad_h, pad_w = (filters_shape[0] - 2) // 2 + 1, (filters_shape[1] - 2) // 2 + 1
@@ -45,14 +45,16 @@ def conv(input_data, filters_shape, trainable, name, downsample=False, activate=
                                                  moving_mean_initializer=tf.zeros_initializer(), moving_variance_initializer=tf.ones_initializer(),
                                                  training=trainable)
         else:
-            bias = tf.get_variable(name='bias', shape=filters_shape[-1], trainable=True,
-                                   dtype=tf.float32, initializer=tf.constant_initializer(0.0))
-            conv = tf.nn.bias_add(conv, bias)
+            if bias:
+                bias = tf.get_variable(name='bias', shape=filters_shape[-1], trainable=True,
+                                    dtype=tf.float32, initializer=tf.constant_initializer(0.0))
+                conv = tf.nn.bias_add(conv, bias)
             # conv = tf.concat(conv, bias)
 
         if activate == True:
             if act_fun == 'mish':
-                conv = mish(conv)
+                #conv = mish(conv)
+                conv = tf.nn.leaky_relu(conv, alpha=0.1)
             else:
                 conv = tf.nn.leaky_relu(conv, alpha=0.1)
     return conv
@@ -97,13 +99,13 @@ def csp1stage(input_data, trainable, filters, init_depth_size, stage_num):
     with tf.variable_scope('cspstage_%d' % (stage_num)):
         c = filters
         route = input_data
-        route = conv(route, (1, 1, c, int(c / 2)), trainable=trainable, name='conv_route', act_fun='mish')
+        route = conv(route, (1, 1, c, int(c / 2)), trainable=trainable, name='conv_route', activate=False)
         input_data = conv(input_data, (1, 1, c, int(c / 2)), trainable=trainable, name='conv', act_fun='mish')
         
         for i in range(init_depth_size):
             input_data = res_block(input_data, int(c / 2), int(c / 2), int(c / 2), trainable=trainable, name='residual%d_%d' % (i, init_depth_size))
         
-        input_data = conv(input_data, (1, 1, int(c / 2), int(c / 2)), trainable=trainable, name='conv_residualout', act_fun='mish')
+        input_data = conv(input_data, (1, 1, int(c / 2), int(c / 2)), trainable=trainable, name='conv_residualout', activate=False, bias=False)
         input_data = tf.concat([input_data, route], axis=-1)
 
         input_data = tf.layers.batch_normalization(input_data, beta_initializer=tf.zeros_initializer(), gamma_initializer=tf.ones_initializer(),
@@ -115,27 +117,26 @@ def csp1stage(input_data, trainable, filters, init_depth_size, stage_num):
 
     return input_data
 
-def csp2stage(input_data, trainable, filters, init_depth_size, stage_num):
+def csp2stage(input_data, trainable, filters1, filters2, filters3, init_depth_size, stage_num):
 
-    with tf.variable_scope('cspstage_%d' % stage_num):
-        c = filters
+    with tf.variable_scope('cspstage_%d' % stage_num):        
         route = input_data
-        route = conv(route, (1, 1, c, int(c / 2)), trainable=trainable, name='conv_route', act_fun='mish')
-        input_data = conv(input_data, (1, 1, c, int(c / 2)), trainable=trainable, name='conv', act_fun='mish')
+        route = conv(route, (1, 1, filters1, filters2), trainable=trainable, name='conv_route', act_fun='mish')
+        input_data = conv(input_data, (1, 1, filters1, filters2), trainable=trainable, name='conv', act_fun='mish')
 
         for i in range(init_depth_size):
-            input_data = conv(input_data, (1, 1, int(c / 2), int(c / 2)), trainable=trainable, name='1x1_%d' % (i), act_fun='mish')
-            input_data = conv(input_data, (3, 3, int(c / 2), int(c / 2)), trainable=trainable, name='3x3_%d' % (i), act_fun='mish')
+            input_data = conv(input_data, (1, 1, filters2, filters2), trainable=trainable, name='1x1_%d' % (i), act_fun='mish')
+            input_data = conv(input_data, (3, 3, filters2, filters2), trainable=trainable, name='3x3_%d' % (i), act_fun='mish')
 
 
-        input_data = conv(input_data, (1, 1, int(c / 2), int(c / 2)), trainable=trainable, name='conv_out', act_fun='mish')
+        input_data = conv(input_data, (1, 1, filters2, filters2), trainable=trainable, name='conv_out', activate=False, bias=False)
         input_data = tf.concat([input_data, route], axis=-1)
 
         input_data = tf.layers.batch_normalization(input_data, beta_initializer=tf.zeros_initializer(), gamma_initializer=tf.ones_initializer(),
                                             moving_mean_initializer=tf.zeros_initializer(), moving_variance_initializer=tf.ones_initializer(),
                                             training=trainable)
         input_data = tf.nn.leaky_relu(input_data, alpha=0.1)
-        input_data = conv(input_data, (1, 1, int(c), int(c)), trainable=trainable, name='conv_cspout', act_fun='mish')
+        input_data = conv(input_data, (1, 1, filters3, filters3), trainable=trainable, name='conv_cspout', act_fun='mish')
 
     return input_data
 
@@ -248,7 +249,7 @@ class YOLOV5(object):
    
         route_1, route_2, route_3, conv_num, csp_num = cspdarknet53(input_data, self.trainable, init_width_size, init_depth_size)
 
-        out_19 = csp2stage(route_3, self.trainable, 16*init_width_size, init_depth_size, csp_num)
+        out_19 = csp2stage(route_3, self.trainable, 16*init_width_size, 8*init_width_size, 16*init_width_size, init_depth_size, csp_num)
         csp_num += 1
 
         out_19 = conv(out_19, (1, 1, 16*init_width_size, 8*init_width_size), trainable=self.trainable, 
@@ -260,7 +261,7 @@ class YOLOV5(object):
 
         out_38 = tf.concat([route_2, out_38], axis=-1)
         
-        out_38 = csp2stage(out_38, self.trainable, 8*init_width_size, init_depth_size, csp_num)
+        out_38 = csp2stage(out_38, self.trainable, 16*init_width_size, 4*init_width_size, 8*init_width_size, init_depth_size, csp_num)
         csp_num += 1
 
         out_38 = conv(out_38, (1, 1, 8*init_width_size, 4*init_width_size),  trainable=self.trainable, 
@@ -272,7 +273,7 @@ class YOLOV5(object):
 
         out_76 = tf.concat([route_1, out_76], axis=-1)        
 
-        out_76 = csp2stage(out_76, self.trainable, 4*init_width_size, init_depth_size, csp_num)
+        out_76 = csp2stage(out_76, self.trainable, 8*init_width_size, 2*init_width_size, 4*init_width_size, init_depth_size, csp_num)
         csp_num += 1
 
         conv_lbbox = conv(out_76, (1, 1, 4*init_width_size, 3 * (self.num_class + 5)), trainable=self.trainable,
@@ -285,7 +286,7 @@ class YOLOV5(object):
 
         out_38 = tf.concat([out_38_1, out_38_2], axis=-1)
 
-        out_38 = csp2stage(out_38, self.trainable, 8*init_width_size, init_depth_size, csp_num)
+        out_38 = csp2stage(out_38, self.trainable, 8*init_width_size, 4*init_width_size, 8*init_width_size, init_depth_size, csp_num)
         csp_num += 1
 
         conv_mbbox = conv(out_38, (1, 1, 8*init_width_size, 3 * (self.num_class + 5)), trainable=self.trainable,
@@ -298,7 +299,7 @@ class YOLOV5(object):
 
         out_19 = tf.concat([out_19_1, out_19_2], axis=-1)
 
-        out_19 = csp2stage(out_19, self.trainable, 16*init_width_size, init_depth_size, csp_num)
+        out_19 = csp2stage(out_19, self.trainable, 16*init_width_size, 8*init_width_size, 16*init_width_size, init_depth_size, csp_num)
         csp_num += 1
 
         conv_sbbox = conv(out_19, (1, 1, 16*init_width_size, 3 * (self.num_class + 5)), trainable=self.trainable,
@@ -331,6 +332,16 @@ class YOLOV5(object):
         xy_grid = tf.tile(xy_grid[tf.newaxis, :, :, tf.newaxis, :], [batch_size, 1, 1, anchor_per_scale, 1])
         xy_grid = tf.cast(xy_grid, tf.float32)
 
+        # pred_xy = ((tf.sigmoid(conv_raw_dxdy) * XYSCALE[i]) - 0.5 * (XYSCALE[i] - 1) + xy_grid) * \
+        #           STRIDES[i]
+        # pred_wh = (tf.exp(conv_raw_dwdh) * ANCHORS[i])
+
+
+        #             y = x[i].sigmoid()
+        #             y[..., 0:2] = (y[..., 0:2] * 2. - 0.5 + self.grid[i].to(x[i].device)) * self.stride[i]  # xy
+        #             y[..., 2:4] = (y[..., 2:4] * 2) ** 2 * self.anchor_grid[i]  # wh
+        # bbox_xy = (tf.sigmoid(conv_raw_xy) * 2 - 0.5 + xy_grid) * strides
+        # bbox_wh = (tf.sigmoid(conv_raw_wh) * 2) ** 2 * anchors
         bbox_xy = (tf.sigmoid(conv_raw_xy) + xy_grid) * strides
         bbox_wh = (tf.sigmoid(conv_raw_wh) * anchors) * strides
 

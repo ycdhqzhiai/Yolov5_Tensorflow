@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2020-08-25 11:41:16
-LastEditTime: 2020-08-25 13:52:39
+LastEditTime: 2020-09-03 15:50:04
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: \\Yolov5_tf\\core\\config.py
@@ -22,8 +22,8 @@ __C.YOLO = edict()
 
 # Set the class name
 __C.YOLO.NET_TYPE = 'darknet53' # 'darknet53' 'mobilenetv2'
-__C.YOLO.CLASSES = 'data/classes/mnist.name'
-__C.YOLO.ANCHORS = 'data/anchors/basline_anchors.txt' # yolov3/5 : yolo_anchors.txt; yolov4 : yolov4_anchors.txt
+__C.YOLO.CLASSES = 'data/classes/coco.names'
+__C.YOLO.ANCHORS = 'data/anchors/coco_anchors.txt' # yolov3/5 : yolo_anchors.txt; yolov4 : yolov4_anchors.txt
 __C.YOLO.MOVING_AVE_DECAY = 0.9995
 __C.YOLO.STRIDES = [8, 16, 32]
 __C.YOLO.STRIDES_TINY = [16, 32]
@@ -41,23 +41,23 @@ __C.YOLO.DEMO_WEIGHT = 'checkpoint/yolov3_coco_demo.ckpt'
 # Train options
 __C.TRAIN = edict()
 
-__C.TRAIN.ANNOT_PATH = './data/dataset/mnist_train.txt'
-__C.TRAIN.BATCH_SIZE = 8 if __C.YOLO.NET_TYPE == 'mobilenetv2' else 2
-__C.TRAIN.INPUT_SIZE = [320, 352, 384, 416, 448, 480, 512, 544, 576, 608]
+__C.TRAIN.ANNOT_PATH = './data/dataset/coco_train2017.txt'
+__C.TRAIN.BATCH_SIZE = 20
+__C.TRAIN.INPUT_SIZE = [416, 448, 480, 512, 544, 576, 608]
 __C.TRAIN.DATA_AUG = True
-__C.TRAIN.LEARN_RATE_INIT = 1e-4
-__C.TRAIN.LEARN_RATE_END = 1e-6
+__C.TRAIN.LEARN_RATE_INIT = 1e-5
+__C.TRAIN.LEARN_RATE_END = 1e-7
 __C.TRAIN.WARMUP_EPOCHS = 10
 __C.TRAIN.FISRT_STAGE_EPOCHS = 100
-__C.TRAIN.SECOND_STAGE_EPOCHS = 1000
-__C.TRAIN.INITIAL_WEIGHT = 'ckpts/yolov3_test-loss=10.0817.ckpt-125'
+__C.TRAIN.SECOND_STAGE_EPOCHS = 5000
+__C.TRAIN.INITIAL_WEIGHT = 'ckpts/yolov5_test-loss=57.1170.ckpt'
 __C.TRAIN.CKPT_PATH = 'ckpts'
 
 
 # TEST options
 __C.TEST = edict()
 
-__C.TEST.ANNOT_PATH = './data/dataset/mnist_test.txt'
+__C.TEST.ANNOT_PATH = './data/dataset/coco_val2017.txt'
 __C.TEST.BATCH_SIZE = 2
 __C.TEST.INPUT_SIZE = 416
 __C.TEST.DATA_AUG = False
