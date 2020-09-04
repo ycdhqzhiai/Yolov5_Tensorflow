@@ -1,7 +1,7 @@
 # Yolov5_Tensorflow
 **Fork from https://github.com/avBuffer/Yolov5_tf**</br>
 
-# 1.训练
+# 训练
 
 简单测试了下，使用[yolov3](https://github.com/YunYang1994/TensorFlow2.0-Examples/tree/master/4-Object_Detection/YOLOV3) 面的yymnist数据集
 
@@ -27,3 +27,6 @@ class Focus(nn.Module):
         return re
 ```
 **测试时候训练开始正常收敛，根据选择loss不同，训练loss在第5-7个epoch会出现NA，修改ing**
+
+## 9.4更新
+* 1.修改了csp2结构，去除了部分bn
