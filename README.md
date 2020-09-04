@@ -30,3 +30,4 @@ class Focus(nn.Module):
 
 ## 9.4更新
 * 1.修改了csp2结构，去除了部分bn
+* 2.关于训练：训练的yymnist数据集，loss 降低到50左右就无法降低了，目前正在用coco训练
